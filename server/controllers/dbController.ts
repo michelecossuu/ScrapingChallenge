@@ -1,26 +1,62 @@
-import { Request, Response, response } from "express";
+import { Request, Response } from "express";
 
 import { getAllRegioniQuery } from "../utils/constant";
 import axios from "axios";
+import RegionModel from "../models/region";
 
-/** 
- * set db data from urls
+
+/**
+ * Set db data from urls
  * 
+ * @param req 
+ * @param res 
  */
-
 export const saveDataIntoDB = async (req: Request, res: Response) => {
-    fetchRegionFromUrl(req, res);
+
+    await RegionModel.deleteMany();
+    fetchFromUrl(getAllRegioniQuery)
+        .then(data => {
+            saveRegions(data);
+        })
+        .catch(err => console.log(err));
+    
+
 };
 
-
-const fetchRegionFromUrl = async (req: Request, res: Response) => {
+/**
+ * Utilizzo axios per ottenere i dati dalla sorgente (url)
+ * 
+ * @param url 
+ * @returns a json
+ */
+const fetchFromUrl = async (url: string) => {
     try {
-        axios.get(getAllRegioniQuery)
-            .then(response => console.log(response.data))
-            .catch(err => console.log(err))
-        res.status(200);
+        const response = await axios.get(url);
+        return response.data;
     } catch(error) {
         console.log('Error: ' + error)
-        res.status(500).json({ message: 'Internal server error' });
     }
 };
+
+/**
+ * Ciclo su tutti i codici regione di "data".
+ * Per ogni elemento salvo nel db un oggetto con la coppia di valori
+ * COD_REGIONE e DESC_REGIONE
+ * 
+ * @param data 
+ */
+const saveRegions = async (data: any) => {
+    try {
+        for (let index = 0; index < data.COD_REGIONE.length; index++) {
+            const region = new RegionModel({
+                COD_REGIONE: data.COD_REGIONE[index],
+                DESC_REGIONE: data.DESC_REGIONE[index]
+            })
+            region.save()
+                .then(result => console.log(result))
+                .catch(err => console.log(err))
+        }
+    } catch(err) {
+        console.log('Error: ' + err)
+    }
+}
